@@ -6,34 +6,39 @@ import styled from "styled-components";
 
 import MyButton from "./MyButton";
 import ReactStars from "react-stars";
+import { IReport } from "../types";
 
-const ReportContentList = ({ reportList, onDelete }) => {
+interface Props {
+  reportList: IReport[];
+  onDelete: (id: string) => void;
+}
+
+const ReportContentList = (props: Props) => {
   const [page, setPage] = useState(1);
   const itemsPerPage = 5;
 
-  const handlePageChage = (page) => {
+  const handlePageChage = (page: number) => {
     setPage(page);
   };
 
   const startIndex = (page - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentPageData = reportList.slice(startIndex, endIndex);
+  const currentPageData = props.reportList.slice(startIndex, endIndex);
 
   const navigate = useNavigate();
 
-  const goDetail = (email, id) => {
+  const goDetail = (email: string, id: string) => {
     navigate(`/report/${email}/${id}`);
   };
 
-  const goEdit = (id) => {
+  const goEdit = (id: string) => {
     navigate(`/edit/${id}`);
   };
 
   // delete 할때 alert 창
-
-  const handleDelete = (item) => {
+  const handleDelete = (item: IReport) => {
     if (window.confirm("독후감을 삭제 하겠습니까?")) {
-      onDelete(item.id);
+      props.onDelete(item.id);
       window.alert("삭제되었습니다.");
       console.log(item);
     } else {
@@ -48,20 +53,17 @@ const ReportContentList = ({ reportList, onDelete }) => {
           <ReportContent key={item.id}>
             <ImageContent onClick={() => goDetail(item.author, item.id)}>
               <BookImg src={item.book.cover} alt="book" />
-              <div>
-                <ReportTitle>독후감 제목: {item.title}</ReportTitle>
+              <InfoContent>
+                <ReportTitle>{item.title}</ReportTitle>
                 <ReportRemain>
-                  <p>책 제목: {item.book.title}</p>
-                  <p>공개 여부: {item.isPrivate ? "비공개" : "공개"}</p>
+                  <p>{item.book.title}</p>
+                  <p>{item.isPrivate ? "비공개" : "공개"}</p>
                   <ReportRating>
-                    별점 : <ReactStars value={item.star} edit={false} size={24} />
+                    <ReactStars value={item.star} edit={false} size={24} />
                   </ReportRating>
-                  <p>
-                    작성 날:
-                    {new Date(parseInt(item.date)).toLocaleDateString()}
-                  </p>
+                  <p>{new Date(item.date).toLocaleDateString()}</p>
                 </ReportRemain>
-              </div>
+              </InfoContent>
             </ImageContent>
 
             <EditButton>
@@ -77,7 +79,7 @@ const ReportContentList = ({ reportList, onDelete }) => {
           </ReportContent>
         ))}
         {currentPageData.length !== 0 && (
-          <Pagination activePage={page} itemsCountPerPage={5} totalItemsCount={reportList.length} pageRangeDisplayed={5} prevPageText={"<"} nextPageText={">"} onChange={handlePageChage} />
+          <Pagination activePage={page} itemsCountPerPage={5} totalItemsCount={props.reportList.length} pageRangeDisplayed={5} prevPageText={"<"} nextPageText={">"} onChange={handlePageChage} />
         )}
       </div>
     </div>
@@ -100,17 +102,40 @@ const BookImg = styled.img`
   margin-bottom: 20px;
 
   border: 1px solid black;
+
+  @media (max-width: 768px) {
+    margin: 0;
+    width: 140px;
+    height: 200px;
+  }
 `;
 
 const ReportContent = styled.div`
   display: flex;
   justify-content: space-between;
   border-bottom: 1px solid #e2e2e2;
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+  }
 `;
 
 const ImageContent = styled.div`
   display: flex;
   gap: 100px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+`;
+
+const InfoContent = styled.div`
+  @media (max-width: 768px) {
+    text-align: center;
+  }
 `;
 
 const ReportTitle = styled.p`
@@ -120,6 +145,10 @@ const ReportTitle = styled.p`
   margin-bottom: 50px;
 
   cursor: pointer;
+
+  @media (max-width: 768px) {
+    margin-bottom: 0;
+  }
 `;
 
 const ReportRemain = styled.div`
@@ -135,10 +164,18 @@ const EditButton = styled.div`
   align-items: flex-start;
   gap: 10px;
   cursor: pointer;
+
+  @media (max-width: 768px) {
+    align-items: center;
+    margin-top: 0;
+  }
 `;
 
 const ReportRating = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
+  @media (max-width: 768px) {
+    justify-content: center;
+  }
 `;

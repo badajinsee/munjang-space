@@ -10,24 +10,43 @@ import { db } from "../fbase";
 import { faArrowDown, faArrowUp } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEdit } from "@fortawesome/free-regular-svg-icons";
+import { IReport, IUserInfo } from "../types";
 
-const Statistics = ({ IsLogin, reportList, userInfo }) => {
+type TempObj = {
+  [key: number]: number;
+};
+
+interface BarHeightProps {
+  value: string;
+}
+
+interface CircleGraphRatioProps {
+  ratio: number;
+}
+
+interface Props {
+  IsLogin: boolean;
+  reportList: IReport[];
+  userInfo: IUserInfo;
+}
+
+const Statistics = (props: Props) => {
   const [year, setYear] = useState(new Date().getFullYear());
   const [reportCount, setReportCount] = useState(0);
   const [targetBookNum, setTargetBookNum] = useState(0);
-  const [isTarget, setIsTarget] = useState();
-  const [barHeight, setBarHeight] = useState([]);
+  const [isTarget, setIsTarget] = useState<boolean>();
+  const [barHeight, setBarHeight] = useState<number[][]>([]);
   const [isEdit, setIsEdit] = useState(false);
   const [ratio, setRatio] = useState(0);
 
-  const inputRef = useRef();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const navigate = useNavigate();
 
   const auth = getAuth();
 
   const getList = () => {
-    const tempObj = {
+    const tempObj: TempObj = {
       1: 0,
       2: 0,
       3: 0,
@@ -41,9 +60,9 @@ const Statistics = ({ IsLogin, reportList, userInfo }) => {
       11: 0,
       12: 0,
     };
-    const data = [];
-    const barHeight = [];
-    const yearFilterData = reportList.filter((it) => new Date(it.date).getFullYear() === year);
+    const data: number[] = [];
+    const barHeight: number[][] = [];
+    const yearFilterData = props.reportList.filter((it) => new Date(it.date).getFullYear() === year);
     setReportCount(yearFilterData.length);
     yearFilterData.forEach((it) => {
       const month = new Date(it.date).getMonth() + 1;
@@ -58,7 +77,7 @@ const Statistics = ({ IsLogin, reportList, userInfo }) => {
     setBarHeight(barHeight);
   };
 
-  const getTargetBookNum = async (email) => {
+  const getTargetBookNum = async (email: string) => {
     const targetBookRef = doc(db, "reports", email);
     const targetBook = await getDoc(targetBookRef);
     const data = targetBook.data();
@@ -68,7 +87,7 @@ const Statistics = ({ IsLogin, reportList, userInfo }) => {
   const createTargetBookNum = async () => {
     console.log(targetBookNum);
     try {
-      const targetBookRef = doc(db, "reports", userInfo.email);
+      const targetBookRef = doc(db, "reports", props.userInfo.email);
       await updateDoc(targetBookRef, {
         targetBookNum,
       });
@@ -85,13 +104,13 @@ const Statistics = ({ IsLogin, reportList, userInfo }) => {
   };
 
   useEffect(() => {
-    if (!IsLogin) {
+    if (!props.IsLogin) {
       navigate("/login");
       alert("로그인 해주세요!");
     } else {
       onAuthStateChanged(auth, (user) => {
         if (user) {
-          getTargetBookNum(user.email).then((res) => {
+          getTargetBookNum(user.email!).then((res) => {
             if (res) {
               setIsTarget(true);
               setTargetBookNum(res);
@@ -103,7 +122,7 @@ const Statistics = ({ IsLogin, reportList, userInfo }) => {
         }
       });
     }
-  }, [reportList, year, userInfo]);
+  }, [props.reportList, year, props.userInfo]);
 
   useEffect(() => {
     getRatio();
@@ -119,8 +138,8 @@ const Statistics = ({ IsLogin, reportList, userInfo }) => {
     getRatio();
   };
 
-  const handleInput = (e) => {
-    setTargetBookNum(e.target.value);
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTargetBookNum(parseInt(e.target.value));
   };
 
   const handleClickEdit = () => {
@@ -132,7 +151,7 @@ const Statistics = ({ IsLogin, reportList, userInfo }) => {
     }, 0);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
     setTargetBookNum(e.target.targetBookNum.value);
     createTargetBookNum();
@@ -140,7 +159,7 @@ const Statistics = ({ IsLogin, reportList, userInfo }) => {
     setIsEdit(false);
   };
 
-  const handleFirstSubmit = (e) => {
+  const handleFirstSubmit = (e: React.ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
     setTargetBookNum(e.target.targetBookNum.value);
     createTargetBookNum();
@@ -149,12 +168,12 @@ const Statistics = ({ IsLogin, reportList, userInfo }) => {
   };
 
   return isTarget ? (
-    <div>
+    <ContentContainer>
       <ImgWrapper>
         <QuoteImage src={process.env.PUBLIC_URL + "/images/quote.png"} alt="독서명언" />
       </ImgWrapper>
       <Container>
-        <UserName>🦦 "{userInfo.username}" 님의 독후감 통계입니다.</UserName>
+        <UserName>🦦 "{props.userInfo.username}" 님의 독후감 통계입니다.</UserName>
         <Header>
           <Box>
             <Year key={year}>{year}</Year>
@@ -212,7 +231,7 @@ const Statistics = ({ IsLogin, reportList, userInfo }) => {
           </Target>
         </Content>
       </Container>
-    </div>
+    </ContentContainer>
   ) : (
     <Container>
       <TargetForm onSubmit={handleFirstSubmit}>
@@ -233,6 +252,17 @@ const Container = styled.div`
   padding: 20px;
   border: 3px solid #ececec;
   border-radius: 3%;
+
+  @media (max-width: 768px) {
+    margin: 0;
+    padding: 20px 5px;
+  }
+`;
+
+const ContentContainer = styled.div`
+  @media (max-width: 768px) {
+    margin-bottom: 20px;
+  }
 `;
 
 const Header = styled.div`
@@ -260,10 +290,16 @@ const Box = styled.div`
 
 const Year = styled.div`
   font-size: 30px;
+  @media (max-width: 768px) {
+    font-size: 24px;
+  }
 `;
 
 const Book = styled.div`
   font-size: 18px;
+  @media (max-width: 768px) {
+    font-size: 14px;
+  }
 `;
 
 const ArrowWrapper = styled.div`
@@ -287,6 +323,10 @@ const Graph = styled.div`
   margin: 50px 0;
 
   font-family: "UhBeeJJIBBABBA";
+
+  @media (max-width: 768px) {
+    gap: 2px;
+  }
 `;
 
 const Month = styled.div`
@@ -295,6 +335,10 @@ const Month = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
+
+  @media (max-width: 768px) {
+    font-size: 18px;
+  }
 `;
 
 const fillUp = keyframes`
@@ -306,7 +350,7 @@ const fillUp = keyframes`
   }
 `;
 
-const Bar = styled.div`
+const Bar = styled.div<BarHeightProps>`
   display: flex;
   justify-content: center;
   align-items: center;
@@ -329,6 +373,10 @@ const TargetBox = styled.div`
   border-radius: 5px;
   font-weight: bold;
   background-color: #e8e8e8;
+
+  @media (max-width: 768px) {
+    flex-grow: 1;
+  }
 `;
 
 const TargetWrapper = styled.div`
@@ -337,7 +385,7 @@ const TargetWrapper = styled.div`
   gap: 20px;
 `;
 
-const CircleGraph = styled.div`
+const CircleGraph = styled.div<CircleGraphRatioProps>`
   position: relative;
   width: 70px;
   height: 70px;
@@ -381,6 +429,7 @@ const CircleGraphCenter = styled.span`
 const Target = styled.div`
   display: flex;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 20px;
 `;
 
@@ -397,7 +446,11 @@ const TargetInput = styled.input`
   }
 `;
 
-const Title = styled.h1``;
+const Title = styled.h1`
+  @media (max-width: 768px) {
+    font-size: 16px;
+  }
+`;
 
 const TargetForm = styled.form`
   display: flex;
@@ -415,6 +468,10 @@ const FirstTargetInput = styled.input`
   font-family: "UhBeeJJIBBABBA";
   &:focus {
     outline: none;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
   }
 `;
 
@@ -435,6 +492,10 @@ const YearBook = styled.div`
 
   font-weight: bold;
   font-family: "UhBeeJJIBBABBA";
+
+  @media (max-width: 768px) {
+    flex-grow: 2;
+  }
 `;
 
 const BookValue = styled.span`
@@ -459,6 +520,10 @@ const UserName = styled.h1`
   font-size: 22px;
   font-family: "UhBeeJJIBBABBA";
   text-align: center;
+
+  @media (max-width: 768px) {
+    font-size: 16px;
+  }
 `;
 
 const ImgWrapper = styled.div`
@@ -471,6 +536,12 @@ const ImgWrapper = styled.div`
   width: 80%;
   height: 120px;
   overflow: hidden;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+  }
 `;
 
 const QuoteImage = styled.img`

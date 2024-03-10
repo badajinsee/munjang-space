@@ -10,7 +10,8 @@ import ChangePassword from "../components/ChangePassword";
 import MyProfile from "../components/MyProfile";
 import MyButton from "../components/MyButton";
 
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
+import { User, getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
+import { FirebaseError } from "firebase/app";
 
 const Profile = () => {
   const [init, setInit] = useState(false);
@@ -19,9 +20,9 @@ const Profile = () => {
 
   const [isChangePW, setIsChangePW] = useState(false);
 
-  const [isSocial, setIsSocial] = useState(localStorage.getItem("isSocial"));
+  const [isSocial, setIsSocial] = useState(localStorage.getItem("isSocial")! === "true");
 
-  const [user, setUser] = useState();
+  const [user, setUser] = useState<User>();
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [photoURL, setPhotoURL] = useState("");
@@ -32,23 +33,23 @@ const Profile = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    setIsSocial(JSON.parse(localStorage.getItem("isSocial")));
+    setIsSocial(localStorage.getItem("isSocial")! === "true");
     onAuthStateChanged(auth, (user) => {
       if (user) {
         setUser(user);
-        setEmail(user.email);
-        setUsername(user.displayName);
-        setPhotoURL(user.photoURL);
+        setEmail(user.email!);
+        setUsername(user.displayName!);
+        setPhotoURL(user.photoURL!);
         setInit(true);
       }
     });
   }, []);
 
-  const handleInput = (e) => {
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.ChangeEvent<HTMLFormElement>) => {
     e.preventDefault();
     let data;
     try {
@@ -57,7 +58,7 @@ const Profile = () => {
         setIsCorrect(true);
       }
     } catch (error) {
-      if (error.code === "auth/wrong-password") {
+      if ((error as FirebaseError).code === "auth/wrong-password") {
         alert("비밀번호가 일치하지 않습니다.");
         setPassword("");
       }
@@ -159,6 +160,12 @@ const Container = styled.div`
   flex-direction: column;
   box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
   background-color: #ececec;
+
+  @media (max-width: 768px) {
+    width: 250px;
+    height: 400px;
+    padding: 20px;
+  }
 `;
 
 const PasswordForm = styled.form`
@@ -166,6 +173,10 @@ const PasswordForm = styled.form`
   flex-direction: column;
   gap: 10px;
   font-family: "KyoboHandwriting2021sjy";
+
+  @media (max-width: 768px) {
+    align-items: center;
+  }
 `;
 
 const Input = styled.input`
@@ -175,6 +186,10 @@ const Input = styled.input`
   padding: 10px;
   border-radius: 5px;
   border: 1px solid #ccc;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 `;
 
 const PasswordCheckContainer = styled.div`
@@ -186,6 +201,10 @@ const PasswordCheckContainer = styled.div`
   flex-direction: column;
   align-items: center;
   gap: 30px;
+
+  @media (max-width: 768px) {
+    margin: 0;
+  }
 `;
 
 const Title = styled.div`
@@ -200,6 +219,10 @@ const Info = styled.div`
   color: #8b8b8b;
   font-size: 14px;
   margin-bottom: 20px;
+
+  @media (max-width: 768px) {
+    font-size: 18px;
+  }
 `;
 
 const PasswordImage = styled.img`

@@ -10,32 +10,40 @@ import MyButton from "./MyButton";
 import uploadProfileImage from "../utils/uploadProfileImage";
 import getDefaultProfileImage from "../utils/getDefaultProfileImage";
 
-const MyProfile = ({ email, username, photoURL, handleChangePW, isSocial }) => {
+interface Props {
+  email: string;
+  username: string;
+  photoURL: string;
+  handleChangePW: () => void;
+  isSocial: boolean;
+}
+
+const MyProfile = (props: Props) => {
   const [init, setInit] = useState(false);
 
-  const [currentUsername, setCurrentUsername] = useState(username);
+  const [currentUsername, setCurrentUsername] = useState(props.username);
 
-  const [profileImage, setProfileImage] = useState(photoURL);
-  const [profileImagePreview, setProfileImagePreview] = useState(photoURL);
+  const [profileImage, setProfileImage] = useState<File | null>(null);
+  const [profileImagePreview, setProfileImagePreview] = useState(props.photoURL);
 
   const [changed, setChanged] = useState(false);
 
   const auth = getAuth();
 
-  const imageInput = useRef();
+  const imageInput = useRef<HTMLInputElement>(null);
 
-  const handleInput = (e) => {
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.name;
     if (name === "username") {
       setCurrentUsername(e.target.value);
     } else if (name === "profileImage") {
-      const file = imageInput.current.files[0];
-      setProfileImage(file);
-      setChanged(true);
+      const file = imageInput.current?.files?.[0];
       if (file) {
+        setProfileImage(file);
+        setChanged(true);
         const reader = new FileReader();
         reader.onloadend = () => {
-          setProfileImagePreview(reader.result);
+          setProfileImagePreview(reader.result as string);
         };
         reader.readAsDataURL(file);
       }
@@ -45,28 +53,28 @@ const MyProfile = ({ email, username, photoURL, handleChangePW, isSocial }) => {
   const handleEdit = async () => {
     const q = query(collection(db, "users"), where("username", "==", currentUsername));
     const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
+    if (!querySnapshot.empty && currentUsername !== props.username) {
       alert("닉네임 중복");
     } else {
-      await setDoc(doc(db, "users", email), { currentUsername });
-      if (changed) {
-        const photoURL = await uploadProfileImage(email, profileImage);
-        await updateProfile(auth.currentUser, {
+      await setDoc(doc(db, "users", props.email), { currentUsername });
+      if (changed && profileImage) {
+        const photoURL = await uploadProfileImage(props.email, profileImage);
+        await updateProfile(auth.currentUser!, {
           displayName: currentUsername,
           photoURL,
         });
       } else {
-        await updateProfile(auth.currentUser, { displayName: currentUsername });
+        await updateProfile(auth.currentUser!, { displayName: currentUsername });
       }
       alert("내 정보 업데이트 완료");
     }
   };
 
   useEffect(() => {
-    if (email && username) {
+    if (props.email && props.username) {
       setInit(true);
     }
-    if (!photoURL) {
+    if (!props.photoURL) {
       getDefaultProfileImage().then((res) => setProfileImagePreview(res));
     }
   }, []);
@@ -77,7 +85,7 @@ const MyProfile = ({ email, username, photoURL, handleChangePW, isSocial }) => {
         {init && (
           <div>
             <ImageInputWrapper>
-              {isSocial ? (
+              {props.isSocial ? (
                 <SocialInputLabel htmlFor="profileImage">
                   <ImagePreview src={profileImagePreview} alt="" />
                 </SocialInputLabel>
@@ -87,27 +95,26 @@ const MyProfile = ({ email, username, photoURL, handleChangePW, isSocial }) => {
                 </InputLabel>
               )}
             </ImageInputWrapper>
-            {!isSocial && <StyledInputFile ref={imageInput} id="profileImage" name="profileImage" type="file" accept="image/*" onChange={handleInput} />}
+            {!props.isSocial && <StyledInputFile ref={imageInput} id="profileImage" name="profileImage" type="file" accept="image/*" onChange={handleInput} />}
 
             <InfoWrapper>
               <div>
                 <InfoText>닉네임 :</InfoText>
-                {isSocial ? <InfoText>{currentUsername}</InfoText> : <UsernameInput name="username" type="text" value={currentUsername} onChange={handleInput} />}
+                {props.isSocial ? <InfoText>{currentUsername}</InfoText> : <UsernameInput name="username" type="text" value={currentUsername} onChange={handleInput} />}
               </div>
               <div>
                 <InfoText>이메일 :</InfoText>
-                <InfoText>{email}</InfoText>
+                <InfoText>{props.email}</InfoText>
               </div>
               <Center>
-                {!isSocial && (
+                {!props.isSocial && (
                   <>
-                    <ChangePasswordLink onClick={handleChangePW}>비밀번호 변경</ChangePasswordLink>
-                    <ChangePasswordLink onClick={handleChangePW}>비밀번호 찾기</ChangePasswordLink>
+                    <ChangePasswordLink onClick={props.handleChangePW}>비밀번호 변경</ChangePasswordLink>
                   </>
                 )}
               </Center>
             </InfoWrapper>
-            <BottomWrapper>{!isSocial && <MyButton text={"수정 완료"} type={"positive"} onClick={handleEdit} />}</BottomWrapper>
+            <BottomWrapper>{!props.isSocial && <MyButton text={"수정 완료"} type={"positive"} onClick={handleEdit} />}</BottomWrapper>
           </div>
         )}
       </div>
@@ -129,6 +136,9 @@ const InfoText = styled.span`
   font-size: 26px;
   margin-right: 10px;
   letter-spacing: 1px;
+  @media (max-width: 768px) {
+    font-size: 20px;
+  }
 `;
 
 const UsernameInput = styled.input`
@@ -136,6 +146,10 @@ const UsernameInput = styled.input`
   padding: 10px;
   border-radius: 5px;
   border: 1px solid #ccc;
+
+  @media (max-width: 768px) {
+    width: 60%;
+  }
 `;
 
 const BottomWrapper = styled.div`
@@ -153,6 +167,11 @@ const ImagePreview = styled.img`
   width: 200px;
   height: 200px;
   border-radius: 50%;
+
+  @media (max-width: 768px) {
+    width: 100px;
+    height: 100px;
+  }
 `;
 
 const ImageInputWrapper = styled.div`

@@ -6,17 +6,42 @@ import getBooks from "../utils/getBooks";
 import MyButton from "../components/MyButton";
 
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRight, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRight, faBook } from "@fortawesome/free-solid-svg-icons";
 
 import { collection, onSnapshot, query, where, getDocs, orderBy } from "firebase/firestore";
 import { db } from "../fbase";
+import { IBook } from "../types";
+
+interface IAllReports {
+  id: string;
+  title: string;
+  content: string;
+  email: string;
+  username: string;
+  profileImage: string;
+  date: number;
+}
+
+type GoToReport = {
+  (email: string, id: string): void;
+};
+
+type HandleBookClick = {
+  (title: string, cover: string, author: string, description: string, isbn13: string): void;
+};
 
 const Book = () => {
-  const { isbn13 } = useParams();
+  const { isbn13 } = useParams() as { isbn13: string };
 
-  const [data, setData] = useState({});
+  const [data, setData] = useState<IBook>({
+    isbn13: "",
+    title: "",
+    author: "",
+    cover: "",
+    description: "",
+  });
 
-  const [bookReports, setBookReports] = useState([]);
+  const [bookReports, setBookReports] = useState<IAllReports[]>([]);
 
   const [loading, setLoading] = useState(false);
 
@@ -26,7 +51,7 @@ const Book = () => {
     navigate(`/thisbookreport/${isbn13}`);
   };
 
-  const goToReport = (email, id) => {
+  const goToReport: GoToReport = (email, id) => {
     navigate(`/report/${email}/${id}`);
   };
 
@@ -36,7 +61,7 @@ const Book = () => {
     try {
       setLoading(true);
       getBookReports(isbn13).then((res) => {
-        setBookReports(res.sort((a, b) => parseInt(b.date) - parseInt(a.date)));
+        setBookReports(res.sort((a, b) => b.date - a.date));
       });
       getBooks(isbn13).then((res) => {
         setData(res[0]);
@@ -47,7 +72,7 @@ const Book = () => {
     }
   }, [isbn13]);
 
-  const handleBookClick = (title, cover, author, description, isbn13) => {
+  const handleBookClick: HandleBookClick = (title, cover, author, description, isbn13) => {
     navigate("/new", {
       state: {
         title: title,
@@ -59,10 +84,10 @@ const Book = () => {
     });
   };
 
-  const getBookReports = async (isbn13) => {
+  const getBookReports = async (isbn13: string): Promise<IAllReports[]> => {
     return new Promise(async (resolve, reject) => {
       const reportsCollectionRef = collection(db, "reports");
-      const allReports = [];
+      const allReports: IAllReports[] = [];
 
       onSnapshot(reportsCollectionRef, async (snapshot) => {
         const promises = snapshot.docChanges().map(async (change) => {
@@ -96,7 +121,7 @@ const Book = () => {
 
   return loading ? (
     <LoadingWrapper>
-      <FontAwesomeIcon icon={faSpinner} spin size="3x" />
+      <FontAwesomeIcon icon={faBook} beatFade size="3x" />
     </LoadingWrapper>
   ) : (
     <BookDetailEntire>
@@ -107,16 +132,16 @@ const Book = () => {
           <BookAuthor>{data.author}</BookAuthor>
           <BookCategory>{data.categoryName}</BookCategory>
           <BookIsbn13>isbn13 : {data.isbn13}</BookIsbn13>
-          <div>
+          <ButtonWrapper>
             <MyButton
               type={"positive"}
               text={"종이책 구매"}
               onClick={() => {
-                window.location.href = data.link;
+                window.location.href = data.link!;
               }}
             />
             <WriteButton onClick={() => handleBookClick(data.title, data.cover, data.author, data.description, data.isbn13)}>독후감 작성하기</WriteButton>
-          </div>
+          </ButtonWrapper>
         </div>
       </BookContent>
 
@@ -132,7 +157,7 @@ const Book = () => {
 
       <ThisBookReport>
         {bookReports.slice(0, 5).map((report, idx) => (
-          <BookReport key={idx} onClick={() => goToReport(report.email, report.id)}>
+          <BookReport key={idx} onClick={() => goToReport(report.email!, report.id)}>
             <ReportTitle>{report.title}</ReportTitle>
             <ReportContent>{report.content}</ReportContent>
             <ReportFooter>
@@ -155,6 +180,12 @@ const BookDetailEntire = styled.div`
 const BookContent = styled.div`
   display: flex;
   gap: 100px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+  }
 `;
 
 const BookTitle = styled.p`
@@ -163,11 +194,19 @@ const BookTitle = styled.p`
 
   margin-top: 0px;
   margin-bottom: 0px;
+
+  @media (max-width: 768px) {
+    font-size: 20px;
+  }
 `;
 
 const BookAuthor = styled.p`
   font-size: 20px;
   color: gray;
+
+  @media (max-width: 768px) {
+    font-size: 18px;
+  }
 `;
 
 const BookCategory = styled.p`
@@ -186,6 +225,12 @@ const BookCover = styled.img`
   margin-left: 30px;
 
   margin-bottom: 30px;
+
+  @media (max-width: 768px) {
+    width: 200px;
+    height: 300px;
+    margin: 0;
+  }
 `;
 
 const BookIntroduction = styled.h1`
@@ -216,6 +261,12 @@ const BookReport = styled.div`
   box-shadow: 12px 0px 11px -3px rgba(0, 0, 0, 0.1);
 
   cursor: pointer;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    height: 160px;
+    margin: 0;
+  }
 `;
 
 const WriteButton = styled.button`
@@ -224,7 +275,7 @@ const WriteButton = styled.button`
   cursor: pointer;
   background-color: #fffb85;
   width: 120px;
-  height: 52px;
+  height: 40px;
 
   font-family: "UhBeeJJIBBABBA";
   font-size: 14px;
@@ -237,10 +288,21 @@ const WriteButton = styled.button`
   &:hover {
     background-color: #f7f25e;
   }
+
+  @media (max-width: 768px) {
+    margin: 0;
+  }
 `;
 
 const ThisBookReport = styled.div`
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    margin-bottom: 20px;
+  }
 `;
 
 const ReportTitle = styled.div`
@@ -248,7 +310,7 @@ const ReportTitle = styled.div`
   font-weight: bold;
   font-size: 18px;
 
-  height: 30px;
+  height: 20%;
 
   white-space: nowrap;
   overflow: hidden;
@@ -262,13 +324,16 @@ const ReportContent = styled.div`
 
   padding: 10px;
 
-  height: 132px;
+  height: 50%;
 
   text-overflow: ellipsis;
   overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 8;
+  @media (max-width: 768px) {
+    padding: 0;
+  }
 `;
 
 const ReportFooter = styled.div`
@@ -309,4 +374,13 @@ const LoadingWrapper = styled.div`
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+`;
+
+const ButtonWrapper = styled.div`
+  @media (max-width: 768px) {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    margin-bottom: 20px;
+  }
 `;
